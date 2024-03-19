@@ -1,0 +1,21 @@
+const int ledPin = 13;
+
+void setup() {
+  // put your setup code here, to run once:
+  pinMode(ledPin,OUTPUT);//initialize the ledPin as an output
+  pinMode(2,INPUT);
+  digitalWrite(2, HIGH);
+}
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  int digitalVal = digitalRead(2);
+  if(HIGH == digitalVal)
+  {
+    digitalWrite(ledPin,LOW);//turn the led off
+  }
+  else
+  {
+    digitalWrite(ledPin,HIGH);//turn the led on 
+  }
+}
