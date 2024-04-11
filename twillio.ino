@@ -1,87 +1,79 @@
-#include <SPI.h>
-#include <WiFiNINA.h>
+#include "SR04.h"
+#include "dht.h"
 
-// Replace with your Wi-Fi credentials
-char ssid[] = "YOUR_SSID";
-char pass[] = "YOUR_PASSWORD";
+// Define the pins for the ultrasonic sensor
+#define TRIG_PIN 12
+#define ECHO_PIN 11
+#define DHT11_PIN 7
+// Create an instance of the SR04 class
+SR04 sr04 = SR04(ECHO_PIN, TRIG_PIN);
 
-// Replace with your Twilio API credentials
-String accountSid = "AC7ac2d338bf30b0711a9cabb6e2ab614e";
-String authToken = "[AuthToken]";
+// DHT
+dht DHT;
 
-// Twilio API endpoint
-String server = "api.twilio.com";
-String resource = "/2010-04-01/Accounts/";
-resource += accountSid;
-resource += "/Messages.json";
-
-WiFiSSLClient client;
+const int ledPin = 13;
 
 void setup() {
+  // Initialize serial communication
   Serial.begin(9600);
+  // Wait for serial port to connect
   while (!Serial) {
-    ; // Wait for Serial port to connect
+    delay(10);
   }
 
-  connectToWiFi();
-  sendTwilioRequest();
+   // put your setup code here, to run once:
+  pinMode(ledPin,OUTPUT);//initialize the ledPin as an output
+  pinMode(2,INPUT);
+  digitalWrite(2, HIGH);
 }
 
 void loop() {
-  // Nothing here
-}
+  // Perform a distance measurement
+  long distance = sr04.Distance();
+  
+  // Print the measured distance
+  Serial.print("Distance: ");
+  Serial.print(distance);
+  Serial.println(" cm");
 
-void connectToWiFi() {
-  WiFi.begin(ssid, pass);
-  Serial.print("Connecting to WiFi");
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  // Delay before taking the next measurement
+  delay(1000); // Adjust delay as needed
+
+  // put your main code here, to run repeatedly:
+  int digitalVal = digitalRead(2);
+  if(HIGH == digitalVal)
+  {
+    digitalWrite(ledPin,LOW);//turn the led off
   }
-  Serial.println();
-  Serial.print("Connected to WiFi network with IP Address: ");
-  Serial.println(WiFi.localIP());
-}
-
-void sendTwilioRequest() {
-  if (client.connect(server, 443)) {
-    Serial.println("Connected to Twilio API");
-
-    // Build the POST request
-    String postData = "To=whatsapp:+16193765816&From=whatsapp:+14155238886&Body=CS%20TEST%20TEST%20TEST";
-    String request = String("POST ") + resource + " HTTP/1.1\r\n" +
-                     "Host: " + server + "\r\n" +
-                     "Content-Type: application/x-www-form-urlencoded\r\n" +
-                     "Content-Length: " + postData.length() + "\r\n" +
-                     "Authorization: Basic " + base64Credentials() + "\r\n" +
-                     "Connection: close\r\n\r\n" +
-                     postData;
-    client.println(request);
-
-    // Read the response
-    while (client.connected()) {
-      if (client.available()) {
-        String line = client.readStringUntil('\n');
-        Serial.println(line);
-      }
-    }
-    client.stop();
-  } else {
-    Serial.println("Failed to connect to Twilio API");
+  else
+  {
+    digitalWrite(ledPin,HIGH);//turn the led on 
+    Serial.println("Tilted");
   }
-}
 
-String base64Credentials() {
-  String credentials = accountSid + ":" + authToken;
-  int credLength = credentials.length();
-  char credArray[credLength];
-  credentials.toCharArray(credArray, credLength + 1);
-  char base64Cred[68];
-  base64_encode(base64Cred, (char *)credArray, credLength);
-  return String(base64Cred);
-}
+  // DHT
 
-// Base64 encoding function (from https://github.com/adamvr/arduino-base64)
-void base64_encode(char *output, char *input, int length) {
-  // ... (implementation omitted for brevity) ...
+  // Debugging: Check the return value of the read function
+  int chk = DHT.read11(DHT11_PIN);
+
+  Serial.print("Read status: ");
+  switch (chk) {
+      case DHTLIB_OK:
+          Serial.println("OK");
+          break;
+      case DHTLIB_ERROR_CHECKSUM:
+          Serial.println("Checksum error");
+          break;
+      case DHTLIB_ERROR_TIMEOUT:
+          Serial.println("Timeout error");
+          break;
+      default:
+          Serial.println("Unknown error");
+          break;
+  }
+
+  Serial.print("Temperature = ");
+  Serial.println(DHT.temperature);
+  Serial.print("Humidity = ");
+  Serial.println(DHT.humidity);
 }
